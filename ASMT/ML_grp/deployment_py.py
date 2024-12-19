@@ -9,14 +9,14 @@ from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 import joblib  # Import joblib for saving models
 import os  # For handling directory paths
+from pathlib import Path
 
 
 
 
+# best_model_name='Random_Forest'
 
-best_model_name='Random_Forest'
-
-model_path = f"{best_model_name}.pkl"
+model_path = Path(__file__).parent / 'Random_Forest.pkl'
 
 model = joblib.load(model_path)
 
