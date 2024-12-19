@@ -16,7 +16,7 @@ from pathlib import Path
 
 # best_model_name='Random_Forest'
 
-model_path = Path(__file__).parent / 'Random_Forest.pkl'
+model_path = Path(__file__).parent / 'Linear_Regression.pkl'
 
 model = joblib.load(model_path)
 
