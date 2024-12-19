@@ -5,8 +5,8 @@ import pandas as pd
 from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
-# from xgboost import XGBRegressor
-# from lightgbm import LGBMRegressor
+from xgboost import XGBRegressor
+from lightgbm import LGBMRegressor
 import joblib  # Import joblib for saving models
 import os  # For handling directory paths
 
