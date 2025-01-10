@@ -13,7 +13,8 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
 
 from pytorch_tabular import TabularModel
-from pytorch_tabular.models import CategoryEmbeddingModelConfig, AutoIntConfig, TabNetModelConfig, FTTransformerConfig,DANetConfig,GANDALFConfig,GatedAdditiveTreeEnsembleConfig,MDNConfig
+from pytorch_tabular.models import CategoryEmbeddingModelConfig
+# from pytorch_tabular.models import CategoryEmbeddingModelConfig, AutoIntConfig, TabNetModelConfig, FTTransformerConfig,DANetConfig,GANDALFConfig,GatedAdditiveTreeEnsembleConfig,MDNConfig
 
 from pytorch_tabular.config import (
     DataConfig,
