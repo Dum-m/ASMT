@@ -1,6 +1,5 @@
 streamlit
 joblib
-pandas
 scikit-learn
 torch
 pytorch-tabular
