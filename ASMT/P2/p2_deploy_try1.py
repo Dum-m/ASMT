@@ -24,19 +24,37 @@ st.set_page_config(
     layout="wide"
 )
 
-# Function to get absolute path for files
+# Correct model filenames based on your local version
+MODEL_FILES = {
+    'PHEV': {
+        0: 'CEM_tf0_PHEV_20241231005132.pkl',
+        1: 'CEM_tf1_PHEV_20241231005142.pkl',
+        2: 'CEM_tf2_PHEV_20241231005106.pkl'
+    },
+    'BEV': {
+        0: 'CEM_tf0_BEV_20241231005043.pkl',
+        1: 'CEM_tf1_BEV_20241231005052.pkl',
+        2: 'CEM_tf2_BEV_20241231005019.pkl'
+    }
+}
+
 def get_file_path(filename):
+    """Get the correct file path in different environments"""
     try:
-        # First try the local directory
-        if os.path.exists(filename):
-            return filename
-        # Then try the parent directory of the script
-        parent_path = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(parent_path, filename)
-        if os.path.exists(file_path):
-            return file_path
-        # If neither exists, raise an error
-        raise FileNotFoundError(f"Could not find {filename}")
+        # Try different possible locations
+        possible_paths = [
+            filename,  # Current directory
+            os.path.join(os.path.dirname(__file__), filename),  # Script directory
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), filename),  # Absolute script directory
+            os.path.join('models', filename)  # Models subdirectory
+        ]
+        
+        for path in possible_paths:
+            if os.path.exists(path):
+                return path
+                
+        st.error(f"Could not find {filename} in any expected location")
+        return None
     except Exception as e:
         st.error(f"Error accessing file {filename}: {str(e)}")
         return None
@@ -64,25 +82,45 @@ def load_models():
     try:
         for ev_type in ['PHEV', 'BEV']:
             for cluster in [0, 1, 2]:
-                model_file = f'CEM_tf{cluster}_{ev_type}_20241231005{cluster:03d}.pkl'
+                model_file = MODEL_FILES[ev_type][cluster]
                 model_path = get_file_path(model_file)
+                
                 if model_path is None:
-                    st.error(f"Could not load model file: {model_file}")
                     continue
-                models[ev_type][cluster] = joblib.load(model_path)
+                    
+                try:
+                    # Load PyTorch Tabular model with proper error handling
+                    model = torch.load(model_path, map_location=torch.device('cpu'))
+                    models[ev_type][cluster] = model
+                except Exception as e:
+                    st.error(f"Error loading model {model_file}: {str(e)}")
+                    # Try alternative loading method
+                    try:
+                        model = joblib.load(model_path)
+                        models[ev_type][cluster] = model
+                    except Exception as e2:
+                        st.error(f"Alternative loading failed for {model_file}: {str(e2)}")
+                        
         return models
     except Exception as e:
-        st.error(f"Error loading models: {str(e)}")
+        st.error(f"Error in model loading process: {str(e)}")
         return None
 
-# Load models
-models = load_models()
-if models is None:
-    st.error("Failed to load models. Please check if model files exist in the application directory.")
-    st.stop()
-
-# Streamlit app interface
+# Streamlit interface
 st.title("2024 EV Prediction by ZCTA5 in New York State")
+
+# Load models
+with st.spinner("Loading models..."):
+    models = load_models()
+    if models is None:
+        st.error("Failed to load models. Please check the model files and their locations.")
+        st.stop()
+
+# Add file location debugging if needed
+if st.checkbox("Show debug information"):
+    st.write("Current working directory:", os.getcwd())
+    st.write("Script location:", os.path.dirname(os.path.abspath(__file__)))
+    st.write("Available files:", os.listdir())
 
 # Dropdown for ZCTA20 selection
 zcta_selected = st.selectbox("Select your ZCTA5:", df['zcta20'].unique())
@@ -99,7 +137,12 @@ if zcta_selected:
             if model:
                 try:
                     row_df = pd.DataFrame(row.values.reshape(1, -1), columns=df.columns)
-                    prediction = model.predict(row_df)
+                    
+                    # Handle prediction based on model type
+                    if isinstance(model, TabularModel):
+                        prediction = model.predict(row_df)
+                    else:
+                        prediction = model.predict(row_df)
                     
                     # Handle different prediction formats
                     if isinstance(prediction, pd.DataFrame):
@@ -109,11 +152,14 @@ if zcta_selected:
                     elif isinstance(prediction, (np.ndarray, list)):
                         predicted_value = prediction[0]
                     else:
-                        raise ValueError("Unexpected prediction format")
+                        predicted_value = float(prediction)
                     
                     return int(round(predicted_value))
                 except Exception as e:
                     st.error(f"Error making prediction: {str(e)}")
+                    if st.checkbox("Show error details"):
+                        st.write("Error type:", type(e))
+                        st.write("Error message:", str(e))
                     return None
             else:
                 st.error("Model not available for this traffic cluster.")
@@ -121,15 +167,17 @@ if zcta_selected:
 
         with col1:
             if st.button("Predict PHEV"):
-                result = predict_ev('PHEV')
-                if result is not None:
-                    st.success(f"2024 PHEV in ZCTA5 {zcta_selected} will be: {result}")
+                with st.spinner("Predicting PHEV..."):
+                    result = predict_ev('PHEV')
+                    if result is not None:
+                        st.success(f"2024 PHEV in ZCTA5 {zcta_selected} will be: {result}")
 
         with col2:
             if st.button("Predict BEV"):
-                result = predict_ev('BEV')
-                if result is not None:
-                    st.success(f"2024 BEV in ZCTA5 {zcta_selected} will be: {result}")
+                with st.spinner("Predicting BEV..."):
+                    result = predict_ev('BEV')
+                    if result is not None:
+                        st.success(f"2024 BEV in ZCTA5 {zcta_selected} will be: {result}")
 
     except Exception as e:
         st.error(f"Error processing selection: {str(e)}")
