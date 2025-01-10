@@ -1,1 +1,10 @@
-
+streamlit
+joblib
+pandas
+scikit-learn
+torch
+pytorch-tabular
+pandas
+numpy
+pyplot
+matplotlib
